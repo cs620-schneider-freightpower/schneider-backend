@@ -12,6 +12,8 @@ List of recommended users (most present in clickstream data):
 * 689997252
 * 625493898
 
+This engine recommends loads to users based on route similarity (using TF-IDF & cosine similarity), geographic similarity, and load quality (the rpm, distance, etc. of loads).
+
 
 ## Requirements
 pip install -r requirements.txt 
