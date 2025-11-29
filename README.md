@@ -29,15 +29,14 @@ The API server for the engine. Starts FastAPI app and loads the engine.
 ### 6. recommendations_tester.py
 Can be ran to test the recommendations provided for the top 10 most represented users in the click-stream dataset. Can be changed for more comprehensive testing.
 
-### us_cities.csv
+### 7. us_cities.csv
 The csv used to standardize city/state names between the clickstream csv and recommendation engine.
 
 ## Running it!
 Can run with uvicorn main:app --reload
 
-which by default means it is available at http://localhost:8000 . Then you can access GET /recommend/{user_id} or GET /recommend/{user_id}?current_lat=X&current_lon=Y .
+which by default means it is available at http://localhost:8000 . Then you can access GET /recommend/{user_id} OR GET /recommend/{user_id}?current_lat=X&current_lon=Y .
 
-### Note: 
-Since we're in the US, make sure to use - (negative) longitude!!
+#### Note: Since we're in the US, make sure to use - (negative) longitude!!
 
 Can also run with provided Dockerfile
