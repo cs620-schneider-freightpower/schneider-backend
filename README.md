@@ -5,6 +5,14 @@ This engine generates the top 5 recommended loads for users (referenced by their
 
 The parameters of the engine can be changed as desired. For example, the weights that determine matching users & loads can be changed, load quality doesn't have to be considered, etc.
 
+List of recommended users (most present in clickstream data):
+* 1450181150
+* 635246794
+* 169348607
+* 689997252
+* 625493898
+
+
 ## Requirements
 pip install -r requirements.txt 
 
