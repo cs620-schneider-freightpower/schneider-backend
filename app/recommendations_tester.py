@@ -1,5 +1,6 @@
 import pandas as pd
 from typing import Dict, List, Tuple
+from datetime import datetime, timedelta
 
 class RecommendationTester:
         def __init__(self, df_original, df_model, loads_df, engine):
@@ -96,14 +97,19 @@ class RecommendationTester:
             }
         
         # run the test for a user
-        def test_user(self, user_id: int, current_location: Tuple = None) -> Dict:
+        def test_user(self, user_id: int, current_location: Tuple = None, desired_date: str = None, desired_time: str = None) -> Dict:
             user_history = self.get_user_history_stats(user_id)
             if not user_history:
                 print("User not found")
                 return None
             
             try:
-                recommendations = self.engine.get_recommendations(user_id, current_location = current_location)
+                recommendations = self.engine.get_recommendations(
+                    user_id, 
+                    current_location=current_location,
+                    desired_date=desired_date,
+                    desired_time=desired_time
+                )
             except Exception as e:
                 print("Error getting recommendations")
                 return None
@@ -115,7 +121,11 @@ class RecommendationTester:
             'user_history': user_history,
             'recommendations': recommendations,
             'match_analysis': match_score,
-            'current_location': current_location
+            'current_location': current_location,
+            'datetime_filter': {
+                'desired_date': desired_date,
+                'desired_time': desired_time
+            } if desired_date and desired_time else None
             }
 
             self.results.append(result)
@@ -129,6 +139,7 @@ class RecommendationTester:
             history = result['user_history']
             match = result['match_analysis']
             recs = result['recommendations']
+            datetime_filter = result['datetime_filter']
 
             print(f"\n{'='*80}")
             print(f"TEST REPORT FOR USER {user_id}")
@@ -152,6 +163,11 @@ class RecommendationTester:
             for i, (dest, count) in enumerate(list(history['event_destination_counts'].items())[:5], 1):
                 print(f"    {i}. {dest}: {count} searches")
 
+            if datetime_filter:
+                print(f"\nDATETIME FILTER:")
+                print(f"  Desired Date: {datetime_filter['desired_date']}")
+                print(f"  Desired Time: {datetime_filter['desired_time']}")
+
             print(f"\n{'='*80}")
             print(f"RECOMMENDATION ACCURACY")
             print(f"{'='*80}\n")
@@ -166,20 +182,21 @@ class RecommendationTester:
                 print(f"    {i}. {loc}")
 
             print(f"\nRECOMMENDED LOADS:")
-            print(f"{'Rank':<5} {'Load ID':<8} {'Score':<10} {'Pickup':<25} {'Delivery':<25} {'Match':<15}")
-            print(f"{'-'*90}")
+            print(f"{'Rank':<5} {'Load ID':<8} {'Score':<10} {'Pickup':<25} {'Delivery':<25} {'Pickup Time':<15} {'Match':<15}")
+            print(f"{'-'*110}")
             
             for i, rec in enumerate(recs, 1):
                 load = self.loads_df[self.loads_df['id'] == int(rec['load_id'])].iloc[0]
                 pickup = f"{load['pickup']['city']},{load['pickup']['state']}"
                 delivery = f"{load['delivery']['city']},{load['delivery']['state']}"
+                pickup_time = f"{load['pickup']['date']} {load['pickup']['time']}"
                 
                 if rec['load_id'] in match['matched_load_ids']:
                     match_status = "✓ Matched"
                 else:
                     match_status = "✗ No Match"
                 
-                print(f"{i:<5} {rec['load_id']:<8} {rec['recommendation_score']:<10.4f} {pickup:<25} {delivery:<25} {match_status:<15}")
+                print(f"{i:<5} {rec['load_id']:<8} {rec['recommendation_score']:<10.4f} {pickup:<25} {delivery:<25} {pickup_time:<15} {match_status:<15}")
 
             print(f"\n{'='*80}\n")
 
@@ -203,19 +220,39 @@ if __name__ == "__main__":
     df_original = df_original.sort_values(['USER_PSEUDO_ID', 'EVENT_TIMESTAMP']).reset_index(drop=True)
     df_original = get_prev_searches(df_original, n_features=3)
 
-
-    tester = RecommendationTester(df_original=df_original, df_model=engine.df_model, loads_df=engine.loads_df, engine = engine)
+    tester = RecommendationTester(df_original=df_original, df_model=engine.df_model, loads_df=engine.loads_df, engine=engine)
     
     # test the top 10 most appeared users 
     top_10_users = df_original['USER_PSEUDO_ID'].value_counts().head(10).index.tolist()
 
-    for i, user_id in enumerate(top_10_users, 1):
-        result = tester.test_user(user_id = user_id)
-
+    # Example 1: Test without datetime filter
+    print("\n" + "="*80)
+    print("TESTING WITHOUT DATETIME FILTER")
+    print("="*80)
+    for i, user_id in enumerate(top_10_users[:3], 1):
+        result = tester.test_user(user_id=user_id)
         if result:
             tester.print_report(result)
         else:
             print("Failed to test")
 
-
-
+    # Example 2: Test with datetime filter
+    print("\n" + "="*80)
+    print("TESTING WITH DATETIME FILTER")
+    print("="*80)
+    # Get a future date from the loads
+    future_date = (datetime.now() + timedelta(days=5)).strftime("%b %d %Y")
+    future_time = "10:00 AM"
+    
+    print(f"Filtering for pickups at or after: {future_date} {future_time}\n")
+    
+    for i, user_id in enumerate(top_10_users[:3], 1):
+        result = tester.test_user(
+            user_id=user_id,
+            desired_date=future_date,
+            desired_time=future_time
+        )
+        if result:
+            tester.print_report(result)
+        else:
+            print("Failed to test")

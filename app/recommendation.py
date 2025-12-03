@@ -159,7 +159,7 @@ def generate_mock_loads(num_loads = 700, save_path = "mock_loads.json"):
         if pickup_datetime < now + timedelta(hours=2):
             pickup_datetime = now.replace(hour = hour_24_format, minute=pickup_minute, second = 0, microsecond=0) + timedelta(days = 1)
 
-        pickup_date_str = pickup_datetime.strftime("%b %d")
+        pickup_date_str = pickup_datetime.strftime("%b %d %Y")
         pickup_time = f'{pickup_hour}:{pickup_minute:02d} {am_pm}'
         
         delivery_days_offset = random.randint(1, 14)
@@ -181,7 +181,7 @@ def generate_mock_loads(num_loads = 700, save_path = "mock_loads.json"):
             delivery_datetime = pickup_datetime + timedelta(hours = 6)
             delivery_datetime = delivery_datetime.replace(hour = delivery_hour_24_format, minute=delivery_minute, second=0, microsecond=0)
 
-        delivery_date_str = delivery_datetime.strftime("%b %d")
+        delivery_date_str = delivery_datetime.strftime("%b %d %Y")
         delivery_time = f'{delivery_hour}:{delivery_minute:02d} {delivery_am_pm}'
 
         load = {
@@ -826,7 +826,8 @@ class LoadRecommendationEngine:
         return np.array(distance_similarities)
     
     # returns the recommended loads for the user, if they have a natnal or not
-    def get_recommendations(self, user_id, current_location = None, limit=5, page=1):
+    # considers NATNAL time - date can be in "Month Date Year" or "Month/Date/Year" format
+    def get_recommendations(self, user_id, current_location = None, limit=5, page=1, desired_date = None, desired_time = None):
         if user_id not in self.user_index:
             return []
         
@@ -838,6 +839,51 @@ class LoadRecommendationEngine:
             result = self.get_hybrid_scores(user_idx, current_location)
             scores = result
             #current_loc_sims = None
+
+        # filter out loads that start before desired datetime
+        if desired_date is not None and desired_time is not None:
+            # may have to change to and?
+
+            # parse the date, should be string if not just set to now
+            if isinstance(desired_date, str):
+                try:
+                    # "Dec 3 2025"
+                    desired_datetime = datetime.strptime(desired_date, "%b %d %Y")
+                except ValueError:
+                    # "12/3/2025"
+                    desired_datetime = datetime.strptime(desired_date, "%m/%d/%Y")
+            else:
+                desired_datetime = desired_date if desired_date else datetime.now()
+
+            # parse the time: 12 hour format with am/pm
+            if desired_time is not None and isinstance(desired_time, str):
+                if ":" in desired_time:
+                    time_object = datetime.strptime(desired_time, "%I:%M %p").time()
+                    desired_datetime = desired_datetime.replace(hour = time_object.hour, minute = time_object.minute)
+
+            # in case of year changes for loads
+            current_date = datetime.now()
+
+            # create mask for loads that have pickups at/after desired_datetime
+            valid_mask = np.ones(len(self.loads_df), dtype = bool)
+
+            for idx, load in self.loads_df.iterrows():
+                pickup_date_str = load["pickup"]["date"]
+                pickup_time_str = load["pickup"]["time"]
+
+                try:
+                    datetime_str = f"{pickup_date_str} {pickup_time_str}"
+                    load_pickup_datetime = datetime.strptime(datetime_str, "%b %d %Y %I:%M %p")
+                except ValueError:
+                    valid_mask[idx] = False
+                    continue
+                
+                # mark as invalid if pickup before dsirede
+                if load_pickup_datetime < desired_datetime:
+                    valid_mask[idx] = False
+
+            # zero out scores that don't meet datetime criteria
+            scores = scores * valid_mask
 
         # Calculate start and end indices for pagination
         start_idx = (page - 1) * limit

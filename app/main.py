@@ -37,7 +37,9 @@ def recommend(
     current_lat: float = None, 
     current_lon: float = None, 
     limit: int = 5,
-    page: int = 1
+    page: int = 1,
+    desired_date: str = None,
+    desired_time: str = None
 ):
     """Get load recommendations for a user
     
@@ -47,11 +49,17 @@ def recommend(
         current_lon: User's current longitude (optional)
         limit: Number of recommendations to return (default: 5)
         page: Page number (default: 1)
+        desired_date: Filter loads for pickups at or after this date (optional)
+                      Format: "Dec 3 2025" or "12/3/2025"
+        desired_time: Filter loads for pickups at or after this time (optional)
+                      Format: "2:30 PM" (12-hour with AM/PM)
     
     Example:
         /recommend/1 (no current location)
         /recommend/1?current_lat=39.0997&current_lon=-94.5786 (Kansas City)
         /recommend/1?limit=10&page=2
+        /recommend/1?desired_date=12/15/2025&desired_time=2:30 PM
+        /recommend/1?current_lat=39.0997&current_lon=-94.5786&desired_date=Dec 15 2025&desired_time=3:45 PM&limit=10&page=2
     """
     if engine is None:
         raise HTTPException(status_code=503, detail="Recommendation engine not initialized")
@@ -64,12 +72,19 @@ def recommend(
         else:
             logger.info(f"Recommendation for user {user_id} (no current location) - Page {page}, Limit {limit}")
         
-        recommendations = engine.get_recommendations(user_id, current_location, limit=limit, page=page)
+        if desired_date and desired_time:
+            logger.info(f"Filtering for pickups at or after: {desired_date} {desired_time}")
+
+        recommendations = engine.get_recommendations(user_id, current_location, limit=limit, page=page, desired_date = desired_date, desired_time = desired_time)
         
         if not recommendations:
             return {
                 "user_id": user_id,
                 "current_location": current_location,
+                "datetime_filter": {
+                    "desired_date": desired_date,
+                    "desired_time": desired_time
+                } if desired_date and desired_time else None,
                 "recommendations": [],
                 "message": "No recommendations available for this user"
             }
@@ -77,6 +92,10 @@ def recommend(
         return {
             "user_id": user_id,
             "current_location": current_location,
+            "datetime_filter": {
+                "desired_date": desired_date,
+                "desired_time": desired_time
+            } if desired_date and desired_time else None,
             "recommendations": recommendations,
             "count": len(recommendations)
         }

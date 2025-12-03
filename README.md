@@ -49,8 +49,17 @@ The csv used to standardize city/state names between the clickstream csv and rec
 ## Running it!
 Can run with uvicorn main:app --reload
 
-which by default means it is available at http://localhost:8000 . Then you can access GET /recommend/{user_id} OR GET /recommend/{user_id}?current_lat=X&current_lon=Y .
+which by default means it is available at http://localhost:8000 . Then you can access
+* GET /recommend/{user_id} - get recommendations just based on user history
+* GET /recommend/{user_id}?current_lat=X&current_lon=Y - get recommendations based on user's current location 
+* GET /recommend/{user_id}?desired_date=12/15/2025&desired_time=2:30 PM - get recommendations filtering by user's pickup datetime
+* GET /recommend/{user_id}?current_lat=X&current_lon=Y&desired_date=12/15/2025&desired_time=2:30 PM&limit=10&page=2 - full example, uses user's NATNAL
 
 #### Note: Since we're in the US, make sure to use - (negative) longitude!!
+
+#### Date/Time format:
+* **Date Format**: "Dec 3 2025" - uses %b so month must be abbreviated OR "12/3/2025"
+* **Time Format**: "2:30 PM" - 12 hour with AM/PM, must be in that format
+* Both date & time have to be provided for datetime filtering
 
 Can also run with provided Dockerfile
