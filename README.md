@@ -24,6 +24,12 @@ pip install -r requirements.txt
 
 or use Docker
 
+## Running Locally
+
+```
+source venv/bin/activate && cd app && uvicorn main:app --reload
+```
+
 ## Files
 
 ### 1. click-stream(in).csv
