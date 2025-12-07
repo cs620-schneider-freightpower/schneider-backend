@@ -978,13 +978,18 @@ class LoadRecommendationEngine:
                     'city': load['pickup']['city'],
                     'state': load['pickup']['state'],
                     'date': load['pickup']['date'],
-                    'time': load['pickup']['time']
+                    'date': load['pickup']['date'],
+                    'time': load['pickup']['time'],
+                    'latitude': float(load['pickup_coord'][0]),
+                    'longitude': float(load['pickup_coord'][1])
                 },
                 'delivery': {
                     'city': load['delivery']['city'],
                     'state': load['delivery']['state'],
                     'date': load['delivery']['date'],
-                    'time': load['delivery']['time']
+                    'time': load['delivery']['time'],
+                    'latitude': float(load['delivery_coord'][0]),
+                    'longitude': float(load['delivery_coord'][1])
                 }
             })
             current_rank += 1
@@ -1081,7 +1086,11 @@ def initialize_engine(data_path = "click-stream(in).csv", loads_path = "mock_loa
 
     # get the cities & coordinates for the loads
     loads_df["pickup_city"] = loads_df["pickup"].apply(lambda x: f"{x['city']},{x['state']}")
+    loads_df["pickup_city"] = loads_df["pickup"].apply(lambda x: f"{x['city']},{x['state']}")
     loads_df['pickup_coord'] = loads_df['pickup_city'].apply(get_latlon).apply(fix_coord)
+
+    loads_df["delivery_city"] = loads_df["delivery"].apply(lambda x: f"{x['city']},{x['state']}")
+    loads_df['delivery_coord'] = loads_df['delivery_city'].apply(get_latlon).apply(fix_coord)
 
     
     def build_route_info(pickup, delivery):
