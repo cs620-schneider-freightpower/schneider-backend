@@ -47,7 +47,7 @@ def recommend(
     current_lat: float = None, 
     current_lon: float = None, 
     distance_range: int = None,
-    limit: int = 5,
+    limit: int = 20,
     page: int = 1,
     desired_date: str = None,
     desired_time: str = None
